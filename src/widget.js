@@ -51,6 +51,7 @@ const TEMPLATE = (opts) => `
     button { -webkit-tap-highlight-color: transparent; }
     button:focus-visible, a:focus-visible { outline: 2px solid #b9c3ff; outline-offset: 2px; }
     .launcher {
+      position: relative;
       width: 56px; height: 56px; margin-left: auto; border: 0; border-radius: 50%;
       display: flex; align-items: center; justify-content: center; cursor: pointer;
       background: var(--ra-primary); color: #fff;
@@ -59,6 +60,8 @@ const TEMPLATE = (opts) => `
     }
     .launcher:hover { transform: translateY(-2px); box-shadow: 0 22px 30px -6px rgba(39,67,184,.25); }
     .launcher svg { width: 26px; height: 26px; }
+    .notification-dot { position: absolute; top: -2px; right: -2px; width: 15px; height: 15px; border: 2px solid #fff; border-radius: 50%; background: #ef4444; box-shadow: 0 1px 5px rgba(0,0,0,.2); }
+    .notification-dot[hidden] { display: none; }
     .panel {
       position: absolute; bottom: 76px; ${opts.position === 'bottom-left' ? 'left' : 'right'}: 0;
       width: min(390px, calc(100vw - 24px)); height: min(510px, calc(100dvh - 108px));
@@ -124,6 +127,7 @@ const TEMPLATE = (opts) => `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
     </svg>
+    <span class="notification-dot" hidden aria-hidden="true"></span>
   </button>
 
   <div class="panel">
@@ -159,6 +163,7 @@ class PortfolioAgent extends HTMLElementBase {
     super();
     this.attachShadow({ mode: 'open' });
     this.history = [];
+    this.transcript = [];
   }
 
   connectedCallback() {
@@ -170,6 +175,9 @@ class PortfolioAgent extends HTMLElementBase {
     this.calendlyLink = this.getAttribute('calendly-link') || '';
     this.greeting = this.getAttribute('greeting') ||
       "Hi! I can answer questions about my experience, skills, and availability. What would you like to know?";
+    this.storageKey = this.getAttribute('storage-key') ||
+      `portfolio-agent-widget:${location.pathname}:${this.apiEndpoint}:${name}`;
+    this.restoreSession();
 
     if (!this.apiEndpoint) {
       console.error('[recruiter-agent] Missing required "api-endpoint" attribute.');
@@ -179,6 +187,7 @@ class PortfolioAgent extends HTMLElementBase {
     this.shadowRoot.host.style.setProperty('--ra-primary', primary);
 
     this.$launcher = this.shadowRoot.querySelector('.launcher');
+    this.$notificationDot = this.shadowRoot.querySelector('.notification-dot');
     this.$panel = this.shadowRoot.querySelector('.panel');
     this.$close = this.shadowRoot.querySelector('.close');
     this.$messages = this.shadowRoot.querySelector('.messages');
@@ -197,17 +206,95 @@ class PortfolioAgent extends HTMLElementBase {
       this.$input.value = button.dataset.question;
       this.sendMessage();
     }));
+    if (!this.hasOpened) {
+      this.notificationTimer = window.setTimeout(() => {
+        if (!this.isConnected || this.hasOpened) return;
+        this.$notificationDot.hidden = false;
+        this.$launcher.setAttribute('aria-label', 'Open chat, new message');
+        this.playNotificationSound();
+      }, 2500);
+    }
+  }
+
+  disconnectedCallback() {
+    window.clearTimeout(this.notificationTimer);
+  }
+
+  restoreSession() {
+    try {
+      const saved = JSON.parse(window.sessionStorage.getItem(this.storageKey) || 'null');
+      if (!saved || !Array.isArray(saved.transcript) || !Array.isArray(saved.history)) return;
+      this.hasOpened = saved.hasOpened === true;
+      this.transcript = saved.transcript.slice(-100).filter((item) =>
+        ['bot', 'user'].includes(item?.role) && typeof item.text === 'string' && item.text.length <= 10000);
+      this.history = saved.history.slice(-20).filter((item) =>
+        ['assistant', 'user'].includes(item?.role) && typeof item.content === 'string' && item.content.length <= 10000);
+      // A reload can interrupt a pending reply. Do not send that unanswered turn twice.
+      if (this.history.at(-1)?.role === 'user') this.history.pop();
+    } catch { /* Session storage can be unavailable in private or restricted contexts. */ }
+  }
+
+  saveSession() {
+    try {
+      window.sessionStorage.setItem(this.storageKey, JSON.stringify({
+        hasOpened: this.hasOpened,
+        transcript: this.transcript.slice(-100),
+        history: this.history.slice(-20),
+      }));
+    } catch { /* Keep chat working if storage is blocked or full. */ }
+  }
+
+  recordMessage(role, text, opts = {}) {
+    this.transcript.push({ role, text, scheduling: Boolean(opts.calendlyLink) });
+    this.saveSession();
+    return this.appendMessage(role, text, opts);
+  }
+
+  playNotificationSound() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const audio = new AudioContext();
+      if (audio.state !== 'running') {
+        void audio.close().catch(() => {});
+        return;
+      }
+      const tone = audio.createOscillator();
+      const volume = audio.createGain();
+      const start = audio.currentTime;
+      tone.type = 'sine';
+      tone.frequency.setValueAtTime(660, start);
+      tone.frequency.exponentialRampToValueAtTime(880, start + .14);
+      volume.gain.setValueAtTime(.035, start);
+      volume.gain.exponentialRampToValueAtTime(.001, start + .18);
+      tone.connect(volume).connect(audio.destination);
+      tone.onended = () => { void audio.close().catch(() => {}); };
+      tone.start(start);
+      tone.stop(start + .18);
+    } catch { /* Autoplay may be blocked; the visual notification still appears. */ }
   }
 
   toggle(force) {
     const open = force ?? !this.$panel.classList.contains('open');
     this.$panel.classList.toggle('open', open);
+    if (open) {
+      this.hasOpened = true;
+      window.clearTimeout(this.notificationTimer);
+      this.$notificationDot.hidden = true;
+      this.$launcher.setAttribute('aria-label', 'Open chat');
+      this.saveSession();
+    }
     if (open && !this.$messages.querySelector('.msg')) {
       const day = document.createElement('div');
       day.className = 'day-pill';
       day.textContent = 'Today • Online';
       this.$messages.appendChild(day);
-      this.appendMessage('bot', this.greeting);
+      if (this.transcript.length) {
+        this.transcript.forEach(({ role, text, scheduling }) =>
+          this.appendMessage(role, text, { calendlyLink: scheduling ? this.calendlyLink : '' }));
+      } else {
+        this.recordMessage('bot', this.greeting);
+      }
     }
   }
 
@@ -245,8 +332,10 @@ class PortfolioAgent extends HTMLElementBase {
     const text = this.$input.value.trim();
     if (!text || !this.apiEndpoint || this.$send.disabled) return;
     this.$input.value = '';
-    this.appendMessage('user', text);
+    this.recordMessage('user', text);
+    this.history = this.history.slice(-19);
     this.history.push({ role: 'user', content: text });
+    this.saveSession();
 
     const typing = this.appendMessage('bot', 'Thinking…');
     typing.classList.add('typing');
@@ -298,9 +387,11 @@ class PortfolioAgent extends HTMLElementBase {
       appendReplyText(typing, received);
       this.history.push({ role: 'assistant', content: received });
       if (suggestScheduling && this.calendlyLink) this.appendSchedulingLink(typing, this.calendlyLink);
+      this.transcript.push({ role: 'bot', text: received, scheduling: Boolean(suggestScheduling && this.calendlyLink) });
+      this.saveSession();
     } catch (err) {
       if (!received) typing.parentElement.remove();
-      this.appendMessage('bot', err.status === 429
+      this.recordMessage('bot', err.status === 429
         ? "I'm getting a lot of questions right now. Please try again shortly."
         : "Something went wrong reaching the server. Please try again in a moment.");
       console.error('[recruiter-agent]', err);

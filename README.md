@@ -61,6 +61,9 @@ In Next.js, put the import and element in a client component (`'use client'`). F
 | `primary-color` | `#2743B8` | Accent color |
 | `position` | `bottom-right` | `bottom-right` or `bottom-left` |
 | `greeting` | Generic introduction | First chat message |
+| `storage-key` | Derived from page path, API URL, and name | Optional key for this widget's session history |
+
+The panel stays closed until clicked. After 2.5 seconds, an unread dot appears on the launcher and the widget attempts a soft notification tone. Browsers may block sound before a visitor interacts with the page; the dot still appears. Opening the chat clears the dot. Messages are kept in `sessionStorage` for the current tab session so a reload restores the conversation; no chat history is written to `localStorage`.
 
 ### Backend
 
