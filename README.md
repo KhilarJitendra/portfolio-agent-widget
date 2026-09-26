@@ -4,7 +4,7 @@ A small, framework-independent chat widget for professional portfolio sites. Vis
 
 The UI is a `<portfolio-agent>` Web Component. A separate Node.js handler calls Groq so your API key never appears in browser code. Responses are streamed to the widget.
 
-> **Project status:** Pre-1.0. The [source repository](https://github.com/KhilarJitendra/portfolio-agent-widget) is public; the npm package has not been published yet.
+> **Project status:** Pre-1.0. The [source repository](https://github.com/KhilarJitendra/portfolio-agent-widget) and [npm package](https://www.npmjs.com/package/portfolio-agent-widget) are public.
 
 ## Try the local demo
 
@@ -28,7 +28,7 @@ The package exposes two entry points:
 | `portfolio-agent-widget/widget` | Registers the `<portfolio-agent>` browser element |
 | `portfolio-agent-widget` | Exports `createRecruiterAgentHandler` for your server |
 
-Once the npm package is published, install it with `npm install portfolio-agent-widget`. Until then, clone this repository or install it directly with `npm install github:KhilarJitendra/portfolio-agent-widget`.
+Install it with `npm install portfolio-agent-widget`.
 
 ### Frontend
 

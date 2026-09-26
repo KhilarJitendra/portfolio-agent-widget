@@ -1,6 +1,6 @@
 {
   "name": "portfolio-agent-widget",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A drop-in chat widget that lets recruiters ask questions about you, professionally, and hands them your scheduling link at the right moment. Framework-agnostic Web Component + a plain Node backend helper.",
   "main": "src/server.js",
   "exports": {
@@ -35,5 +35,7 @@
     "demo": "node --env-file=.env examples/node-server/server.js",
     "test": "node --test"
   },
-  "engines": { "node": ">=20.6" }
+  "engines": {
+    "node": ">=20.6"
+  }
 }
