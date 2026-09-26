@@ -262,15 +262,15 @@ class PortfolioAgent extends HTMLElementBase {
     const paint = window.setInterval(() => {
       if (visible >= received.length) return;
       const nearBottom = this.$messages.scrollHeight - this.$messages.scrollTop - this.$messages.clientHeight < 100;
-      // Reveal at a conversational pace, but catch up when the model sends a long burst.
+      // Keep a steady reading pace even when the model sends a long burst.
       const pending = received.length - visible;
-      visible = Math.min(received.length, visible + (reducedMotion ? pending : Math.min(24, Math.max(2, Math.ceil(pending / 35)))));
+      visible = Math.min(received.length, visible + (reducedMotion ? pending : 2));
       typing.classList.remove('typing');
       if (!reducedMotion) typing.classList.add('revealing');
       typing.replaceChildren();
       appendReplyText(typing, received.slice(0, visible), true);
       if (nearBottom) this.$messages.scrollTop = this.$messages.scrollHeight;
-    }, 35);
+    }, 55);
 
     try {
       const res = await fetch(this.apiEndpoint, {
@@ -301,7 +301,7 @@ class PortfolioAgent extends HTMLElementBase {
         }
       }
       if (!done || !received.trim()) throw new Error('Response stream ended early');
-      while (visible < received.length) await new Promise((resolve) => window.setTimeout(resolve, 35));
+      while (visible < received.length) await new Promise((resolve) => window.setTimeout(resolve, 55));
       typing.classList.remove('revealing');
       typing.replaceChildren();
       appendReplyText(typing, received);
