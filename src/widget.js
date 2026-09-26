@@ -97,12 +97,8 @@ const TEMPLATE = (opts) => `
     .msg.bot { background: #fff; color: #0b1c30; border: 1px solid #e2e8f0; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(15,23,42,.06); }
     .msg.user { background: var(--ra-primary); color: #fff; border-bottom-right-radius: 4px; box-shadow: 0 1px 3px rgba(39,67,184,.12); }
     .msg.typing { color: #64748b; font-style: italic; animation: ra-pulse 1.2s ease-in-out infinite; }
-    .msg.revealing { animation: ra-appear .25s ease-out both; }
-    .msg.revealing::after { content: ''; display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -.15em; border-radius: 2px; background: var(--ra-primary); animation: ra-caret .8s steps(1) infinite; }
     .message-time { padding: 0 4px; color: #64748b; font-size: 10px; font-weight: 600; }
     @keyframes ra-pulse { 50% { opacity: .55; } }
-    @keyframes ra-appear { from { opacity: .65; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes ra-caret { 50% { opacity: 0; } }
     .cal-link { display: inline-flex; align-items: center; margin-top: 8px; padding: 8px 14px; border-radius: 12px; background: var(--ra-primary); color: #fff !important; text-decoration: none; font-size: 12px; font-weight: 600; }
     .cal-link:hover { filter: brightness(.92); }
     .quick-prompts { flex: none; display: flex; gap: 6px; padding: 7px 12px; overflow-x: auto; background: #eff4ff; scrollbar-width: none; }
@@ -121,7 +117,7 @@ const TEMPLATE = (opts) => `
       :host { inset: auto ${opts.position === 'bottom-left' ? 'auto' : '12px'} 12px ${opts.position === 'bottom-left' ? '12px' : 'auto'}; }
       .panel { bottom: 72px; height: min(510px, calc(100dvh - 96px)); border-radius: 22px; }
     }
-    @media (prefers-reduced-motion: reduce) { .launcher, .panel, .composer button { transition: none; } .msg.typing, .msg.revealing, .msg.revealing::after { animation: none; } .msg.revealing::after { display: none; } }
+    @media (prefers-reduced-motion: reduce) { .launcher, .panel, .composer button { transition: none; } .msg.typing { animation: none; } }
   </style>
 
   <button class="launcher" part="launcher" aria-label="Open chat">
@@ -258,19 +254,15 @@ class PortfolioAgent extends HTMLElementBase {
     this.$prompts.forEach((button) => { button.disabled = true; });
     let received = '';
     let visible = 0;
-    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const paint = window.setInterval(() => {
       if (visible >= received.length) return;
       const nearBottom = this.$messages.scrollHeight - this.$messages.scrollTop - this.$messages.clientHeight < 100;
-      // Keep a steady reading pace even when the model sends a long burst.
-      const pending = received.length - visible;
-      visible = Math.min(received.length, visible + (reducedMotion ? pending : 2));
+      visible = Math.min(received.length, visible + 4);
       typing.classList.remove('typing');
-      if (!reducedMotion) typing.classList.add('revealing');
       typing.replaceChildren();
       appendReplyText(typing, received.slice(0, visible), true);
       if (nearBottom) this.$messages.scrollTop = this.$messages.scrollHeight;
-    }, 55);
+    }, 30);
 
     try {
       const res = await fetch(this.apiEndpoint, {
@@ -301,8 +293,7 @@ class PortfolioAgent extends HTMLElementBase {
         }
       }
       if (!done || !received.trim()) throw new Error('Response stream ended early');
-      while (visible < received.length) await new Promise((resolve) => window.setTimeout(resolve, 55));
-      typing.classList.remove('revealing');
+      while (visible < received.length) await new Promise((resolve) => window.setTimeout(resolve, 30));
       typing.replaceChildren();
       appendReplyText(typing, received);
       this.history.push({ role: 'assistant', content: received });
@@ -315,7 +306,6 @@ class PortfolioAgent extends HTMLElementBase {
       console.error('[recruiter-agent]', err);
     } finally {
       window.clearInterval(paint);
-      typing.classList.remove('typing', 'revealing');
       this.$send.disabled = false;
       this.$prompts.forEach((button) => { button.disabled = false; });
     }
