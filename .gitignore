@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+npm-debug.log*
+.DS_Store
+dist/
+.vercel/
+*.log
+coverage/
+examples/knowledge-base.local.js

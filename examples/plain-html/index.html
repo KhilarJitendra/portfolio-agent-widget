@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Portfolio Agent Widget Demo</title>
+</head>
+<body>
+  <h1>Alex Rivera</h1>
+  <p>Frontend engineer — this page demonstrates the portfolio-agent widget in the bottom-right corner.</p>
+
+  <!-- Point api-endpoint at wherever you're running the backend handler
+       (see examples/node-server/server.js) -->
+  <portfolio-agent
+    name="Ask Alex Rivera's Assistant"
+    avatar="AR"
+    api-endpoint="/api/recruiter-agent"
+    calendly-link=""
+    primary-color="#2743B8"
+    greeting="Hi! I can answer questions about experience, skills, and availability. What would you like to know?"
+  ></portfolio-agent>
+
+  <script type="module" src="/src/widget.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+name: Bug report
+description: Report a reproducible problem with the widget or handler
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Include expected and actual behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Use a minimal example and remove keys or personal data.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Package and Node.js versions

@@ -1,0 +1,39 @@
+{
+  "name": "portfolio-agent-widget",
+  "version": "0.1.0",
+  "description": "A drop-in chat widget that lets recruiters ask questions about you, professionally, and hands them your scheduling link at the right moment. Framework-agnostic Web Component + a plain Node backend helper.",
+  "main": "src/server.js",
+  "exports": {
+    ".": "./src/server.js",
+    "./widget": "./src/widget.js"
+  },
+  "files": [
+    "src",
+    "examples/knowledge-base.example.js",
+    "examples/node-server/server.js",
+    "examples/plain-html/index.html",
+    "README.md"
+  ],
+  "keywords": [
+    "portfolio",
+    "chat-widget",
+    "recruiter",
+    "groq",
+    "web-component",
+    "resume"
+  ],
+  "author": "Jitendra Khilar",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KhilarJitendra/portfolio-agent-widget.git"
+  },
+  "homepage": "https://github.com/KhilarJitendra/portfolio-agent-widget#readme",
+  "bugs": "https://github.com/KhilarJitendra/portfolio-agent-widget/issues",
+  "type": "module",
+  "scripts": {
+    "demo": "node --env-file=.env examples/node-server/server.js",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=20.6" }
+}
